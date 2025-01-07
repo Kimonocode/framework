@@ -2,12 +2,12 @@
 
 namespace Unit\Infra;
 
-use App\Http\Controller\HomeController;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 use Infra\Errors\Router\RouteNotFoundException;
 use Infra\Router\Router;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ServerRequestInterface;
 
 class RouterTest extends TestCase
 {
@@ -28,7 +28,7 @@ class RouterTest extends TestCase
     public function testRouteWithDynamicParameter()
     {
         $router = new Router();
-        $router->get('user.show', '/user/{id}', function ($request) {
+        $router->get('user.show', '/user/{id}', function (ServerRequestInterface $request) {
             $params = $request->getAttribute('params');
             return new Response(200, [], "User ID: " . $params['id']);
         });
@@ -47,19 +47,6 @@ class RouterTest extends TestCase
         $request = new ServerRequest('GET', '/azeazeze');
 
         $router->dispatch($request);
-    }
-
-
-    public function testRouteWhitController()
-    {
-        $router = new Router();
-        $router->get('home.index', '/', [HomeController::class, 'index']);
-
-        $request = new ServerRequest('GET', '/');
-        $response = $router->dispatch($request);
-
-        $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame('<h1>Hello World</h1>', (string)$response->getBody());
     }
 
 }

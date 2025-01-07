@@ -7,6 +7,10 @@ use Infra\Errors\Router\InvalidControllerException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Infra\Errors\Router\RouteNotFoundException;
+use Infra\Renderer\HtmlRenderer;
+use Infra\Renderer\RendererInterface;
+use ReflectionFunction;
+use ReflectionMethod;
 
 class Router
 {
@@ -36,7 +40,7 @@ class Router
      *
      * @param  string $name
      * @param  string $path 
-     * @param  callable|array $handler fonction ou controller appelé à l'appel de la route
+     * @param  callable|array $handler fonction ou contrôleur appelé à l'appel de la route
      * @return Route
      */
     public function get(string $name, string $path, callable|array $handler): Route
@@ -71,7 +75,6 @@ class Router
             }
         }
 
-        // Si aucune route ne correspond
         return new Response(404, ['Content-Type' => 'text/plain'], '404 Not Found');
     }
 
@@ -107,13 +110,13 @@ class Router
     }
 
     /**
-     * Vérifie si le handler de la route est un callable ou une class Controller
+     * Vérifie si le handler de la route est un callable ou une classe Controller
      *
      * @param  Route $route
      * @param  ServerRequestInterface $request
      * @return mixed
      * @throws InvalidControllerException
-    */
+     */
     private function getHandler(Route $route, ServerRequestInterface $request): mixed
     {
         $handler = $route->getHandler();
@@ -122,35 +125,67 @@ class Router
         if (is_array($handler)) {
             [$controller, $method] = $handler;
 
-            // Vérification de l'existence du contrôleur
             if (!class_exists($controller)) {
                 throw new InvalidControllerException("Le contrôleur $controller n'existe pas.");
             }
 
-            // Vérification de l'existence de la méthode
             if (!method_exists($controller, $method)) {
                 throw new InvalidControllerException("La méthode $method n'existe pas dans le contrôleur $controller.");
             }
 
-            // Instanciation du contrôleur
             $instance = new $controller();
 
-            if (!is_callable([$instance, $method])) {
-                throw new InvalidControllerException("La méthode $method du contrôleur $controller n'est pas callable.");
-            }
-
-            return call_user_func([$instance, $method], $request, new Response());
+            return $this->callHandler([$instance, $method], $request);
         }
 
         // Gestion du handler sous forme de fonction anonyme ou callable
         if (is_callable($handler)) {
-            return call_user_func($handler, $request, new Response());
+            return $this->callHandler($handler, $request);
         }
 
         throw new InvalidControllerException("Le handler fourni n'est ni un callable valide ni un contrôleur valide.");
     }
 
-}   
+    /**
+     * Appelle le handler avec des paramètres dynamiques
+     *
+     * @param  callable|array $handler
+     * @param  ServerRequestInterface $request
+     * @return mixed
+     */
+    private function callHandler(callable|array $handler, ServerRequestInterface $request): mixed
+    {
+        $reflection = is_array($handler)
+            ? new ReflectionMethod($handler[0], $handler[1])
+            : new ReflectionFunction($handler);
+
+        $dependencies = [];
+
+        foreach ($reflection->getParameters() as $parameter) {
+            $type = $parameter->getType()?->getName();
+
+            // Injection des dépendances selon le type attendu
+            switch ($type) {
+                case ServerRequestInterface::class:
+                    $dependencies[] = $request;
+                    break;
+                case ResponseInterface::class:
+                    $dependencies[] = new Response();
+                    break;
+                case RendererInterface::class:  // Correctement injecter le Renderer
+                    $dependencies[] = new HtmlRenderer(); // ou une autre implémentation de RendererInterface
+                    break;
+                default:
+                // Pour tout autre paramètre, on passe null (ou une valeur par défaut si nécessaire)
+                    $dependencies[] = null;
+                    break;
+            }
+        }
+
+        return call_user_func_array($handler, $dependencies);
+    }
+
+}
 
 
 
