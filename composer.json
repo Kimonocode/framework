@@ -3,8 +3,8 @@
     "version": "1.0.0",
     "autoload": {
         "psr-4": {
-            "Infra\\": "src/@Framework",
-            "App\\": "src/app"
+            "Infra\\": "src/@Framework/",
+            "App\\": "src/app/"
         }
     },
     "authors": [
@@ -19,6 +19,7 @@
         "guzzlehttp/guzzle": "^7.9",
         "guzzlehttp/psr7": "^2.7",
         "http-interop/response-sender": "^1.0",
-        "twig/twig": "^3.18"
+        "twig/twig": "^3.18",
+        "robmorgan/phinx": "^0.16.6"
     }
 }

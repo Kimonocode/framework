@@ -37,7 +37,7 @@ class TwigRenderer implements RendererInterface {
         $this->viewsPath = Kernel::directory('views');
         $this->loader = new FilesystemLoader($this->viewsPath);
         $this->twig = new Environment($this->loader, [
-
+            
         ]);
     }
 
