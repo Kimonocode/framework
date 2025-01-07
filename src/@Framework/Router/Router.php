@@ -7,8 +7,8 @@ use Infra\Errors\Router\InvalidControllerException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Infra\Errors\Router\RouteNotFoundException;
-use Infra\Renderer\HtmlRenderer;
 use Infra\Renderer\RendererInterface;
+use Infra\Renderer\TwigRenderer;
 use ReflectionFunction;
 use ReflectionMethod;
 
@@ -173,7 +173,7 @@ class Router
                     $dependencies[] = new Response();
                     break;
                 case RendererInterface::class:  // Correctement injecter le Renderer
-                    $dependencies[] = new HtmlRenderer(); // ou une autre implémentation de RendererInterface
+                    $dependencies[] = new TwigRenderer(); // ou une autre implémentation de RendererInterface
                     break;
                 default:
                 // Pour tout autre paramètre, on passe null (ou une valeur par défaut si nécessaire)

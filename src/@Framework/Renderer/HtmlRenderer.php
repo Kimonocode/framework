@@ -3,6 +3,7 @@
 namespace Infra\Renderer;
 
 use GuzzleHttp\Psr7\Response;
+use Infra\Kernel;
 use Psr\Http\Message\ResponseInterface;
 
 class HtmlRenderer implements RendererInterface {
@@ -14,9 +15,18 @@ class HtmlRenderer implements RendererInterface {
      */
     private $viewsPath;
 
+    /**
+     * Container de functions utlisées dans les vues
+     *
+     * @var array
+     */
+    private $htmlFunctions = [];
+
     public function __construct()
     {
-        $this->viewsPath = dirname($_SERVER['SCRIPT_FILENAME'], 2) . DIRECTORY_SEPARATOR . "resources" . DIRECTORY_SEPARATOR . "views";
+        require Kernel::directory('start') . '/kernel.php';
+        $this->viewsPath = Kernel::directory('views');
+        $this->htmlFunctions = $viewsFunctions;
     }
 
     /**
@@ -27,12 +37,19 @@ class HtmlRenderer implements RendererInterface {
      */
     public function render(string $view, array $params = []): ResponseInterface
     {   
+        // extrait les paramètres pour les passer à la vues
         if(!empty($params)){
             extract($params, EXTR_OVERWRITE);
         }
+        // extrait les functions
+        if(!empty($this->htmlFunctions)){
+            foreach($this->htmlFunctions as $name => $callback){
+                $$name = $callback;
+            }
+        }
 
         ob_start();
-        require $this->viewsPath . DIRECTORY_SEPARATOR ."$view.html.php";
+        require $this->viewsPath . "/$view.html.php";
         $content = ob_get_clean();
         
         $response = new Response();

@@ -7,9 +7,9 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 try {
 
-$app = new Infra\App();
+$kernel= new Infra\Kernel();
 
-$response = $app->run(ServerRequest::fromGlobals());
+$response = $kernel->run(ServerRequest::fromGlobals());
 
 send($response);
 

@@ -18,6 +18,7 @@
     "require": {
         "guzzlehttp/guzzle": "^7.9",
         "guzzlehttp/psr7": "^2.7",
-        "http-interop/response-sender": "^1.0"
+        "http-interop/response-sender": "^1.0",
+        "twig/twig": "^3.18"
     }
 }

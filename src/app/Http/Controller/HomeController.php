@@ -10,7 +10,7 @@ class HomeController extends Controller {
 
     public function index(RendererInterface $view): ResponseInterface
     {
-        return $view->render('home', ['name' => 'Marie']);
+        return $view->render('home');
     }
 
 }
