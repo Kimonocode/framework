@@ -18,7 +18,7 @@ class MsqlRepository implements RepositoryInterface {
             $psd = '';
             try {
                 self::$connection = new PDO(
-                    "mysql:host=$host;dbname=$dbname;charset=utf8;",
+                    "msql:host=$host;dbname=$dbname;charset=utf8;",
                     $user,
                     $psd,
                     [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
