@@ -20,13 +20,13 @@ class HtmlRenderer implements RendererInterface {
      *
      * @var array
      */
-    private $htmlFunctions = [];
+    private $functions = [];
 
     public function __construct()
     {
         require Kernel::directory('start') . '/kernel.php';
         $this->viewsPath = Kernel::directory('views');
-        $this->htmlFunctions = $viewsFunctions;
+        $this->functions = $viewsFunctions;
     }
 
     /**
@@ -43,7 +43,7 @@ class HtmlRenderer implements RendererInterface {
         }
         // extrait les functions
         if(!empty($this->htmlFunctions)){
-            foreach($this->htmlFunctions as $name => $callback){
+            foreach($this->functions as $name => $callback){
                 $$name = $callback;
             }
         }

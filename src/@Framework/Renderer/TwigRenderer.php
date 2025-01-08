@@ -7,6 +7,7 @@ use Infra\Kernel;
 use Psr\Http\Message\ResponseInterface;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
+use Twig\TwigFunction;
 
 class TwigRenderer implements RendererInterface {
 
@@ -34,12 +35,17 @@ class TwigRenderer implements RendererInterface {
 
     public function __construct()
     {   
+        require Kernel::directory('start') . '/kernel.php';
         $this->viewsPath = Kernel::directory('views');
         $this->loader = new FilesystemLoader($this->viewsPath);
         $this->twig = new Environment($this->loader, [
             
         ]);
+        foreach($twigFunctions as $function){
+            $this->twig->addFunction($function);
+        }
     }
+
 
     public function render(string $view, array $params = []): ResponseInterface
     {   

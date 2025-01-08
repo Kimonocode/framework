@@ -9,6 +9,14 @@ use Psr\Http\Message\ServerRequestInterface;
 interface RouterInterface {
     
     /**
+     * Renvoie un tableau de toutes les routes enregistrées par leurs méthodes.
+     *
+     * @param string $method
+     * @return Route[]
+     */
+    public function getRoutes(string $method): array;
+
+    /**
      * Enregistre une route en GET
      *
      * @param  string $name Nom de la route
