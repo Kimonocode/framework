@@ -5,7 +5,7 @@ namespace Infra\Repository;
 use PDO;
 use PDOException;
 
-class MsqlRepository implements RepositoryInterface {
+class MysqlRepository implements RepositoryInterface {
     
     private static ?PDO $connection = null;       
     
