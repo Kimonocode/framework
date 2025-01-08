@@ -88,7 +88,7 @@ class Kernel
     {
         $builder = new ContainerBuilder();
 
-        $builder->addDefinitions(Kernel::root() . '/config/config.php');
+        $builder->addDefinitions(Kernel::root() . '/config/di.php');
 
         self::$container = $builder->build();
     }
