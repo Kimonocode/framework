@@ -20,6 +20,7 @@
         "guzzlehttp/psr7": "^2.7",
         "http-interop/response-sender": "^1.0",
         "twig/twig": "^3.18",
-        "robmorgan/phinx": "^0.16.6"
+        "robmorgan/phinx": "^0.16.6",
+        "php-di/php-di": "^7.0"
     }
 }

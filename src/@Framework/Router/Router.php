@@ -4,16 +4,15 @@ namespace Infra\Router;
 
 use GuzzleHttp\Psr7\Response;
 use Infra\Errors\Router\InvalidControllerException;
+use Infra\Kernel;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Infra\Errors\Router\RouteNotFoundException;
-use Infra\Renderer\RendererInterface;
-use Infra\Renderer\TwigRenderer;
 use ReflectionFunction;
 use ReflectionMethod;
 
-class Router
-{
+class Router implements RouterInterface
+{     
     /**
      * Tableau des routes
      */
@@ -36,12 +35,7 @@ class Router
     }
 
     /**
-     * Ajoute une Route GET dans le tableau de routes
-     *
-     * @param  string $name
-     * @param  string $path 
-     * @param  callable|array $handler fonction ou contrôleur appelé à l'appel de la route
-     * @return Route
+     * @inheritDoc
      */
     public function get(string $name, string $path, callable|array $handler): Route
     {
@@ -51,11 +45,33 @@ class Router
     }
 
     /**
-     * Parcourt toutes les routes du tableau et appelle la fonction de la route si elle est matchée.
-     *
-     * @param ServerRequestInterface $request
-     * @return ResponseInterface
-     * @throws RouteNotFoundException
+     * @inheritDoc
+     */
+    public function post(string $name, string $path, array|callable $handler): Route 
+    {
+        return new Route('POST', 'post', '/', function(){});
+
+    }
+ 
+    /**
+     * @inheritDoc
+     */
+    public function put(string $name, string $path, array|callable $handler): Route 
+    {
+        return new Route('PUT', 'put', '/', function(){});
+
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function delete(string $name, string $path, array|callable $handler): Route 
+    {
+        return new Route('DELETE', 'delete', '/', function(){});
+    }
+
+    /**
+     * @inheritDoc
      */
     public function dispatch(ServerRequestInterface $request): ResponseInterface
     {
@@ -147,10 +163,10 @@ class Router
     }
 
     /**
-     * Appelle le handler avec des paramètres dynamiques
+     * Appelle le handler avec des paramètres dynamiques via le conteneur
      *
-     * @param  callable|array $handler
-     * @param  ServerRequestInterface $request
+     * @param callable|array $handler
+     * @param ServerRequestInterface $request
      * @return mixed
      */
     private function callHandler(callable|array $handler, ServerRequestInterface $request): mixed
@@ -164,27 +180,33 @@ class Router
         foreach ($reflection->getParameters() as $parameter) {
             $type = $parameter->getType()?->getName();
 
-            // Injection des dépendances selon le type attendu
-            switch ($type) {
-                case ServerRequestInterface::class:
+            if ($type) {
+                // Si une dépendance est définie, la récupérer depuis le conteneur
+                if (Kernel::container()->has($type)) {
+                $dependencies[] = Kernel::container()->get($type);
+                } elseif ($type === ServerRequestInterface::class) {
                     $dependencies[] = $request;
-                    break;
-                case ResponseInterface::class:
+                } elseif ($type === ResponseInterface::class) {
                     $dependencies[] = new Response();
-                    break;
-                case RendererInterface::class:  // Correctement injecter le Renderer
-                    $dependencies[] = new TwigRenderer(); // ou une autre implémentation de RendererInterface
-                    break;
-                default:
-                // Pour tout autre paramètre, on passe null (ou une valeur par défaut si nécessaire)
-                    $dependencies[] = null;
-                    break;
+                } else {
+                    // Tentative d'instanciation automatique
+                    try {
+                        $dependencies[] = new $type();
+                    } catch (\Throwable $e) {
+                        throw new \InvalidArgumentException("Impossible d'instancier le paramètre '{$parameter->getName()}' de type '{$type}'");
+                    }
+                }
+            } elseif ($parameter->isDefaultValueAvailable()) {
+                // Utiliser la valeur par défaut si disponible
+                $dependencies[] = $parameter->getDefaultValue();
+            } else {
+                // Sinon passer null
+                $dependencies[] = null;
             }
         }
 
         return call_user_func_array($handler, $dependencies);
     }
-
 }
 
 

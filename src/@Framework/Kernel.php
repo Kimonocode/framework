@@ -2,14 +2,22 @@
 
 namespace Infra;
 
+use DI\ContainerBuilder;
 use Exception;
 use GuzzleHttp\Psr7\Response;
 use InvalidArgumentException;
+use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 class Kernel
-{   
+{       
+    private static $container;
+
+    public function __construct()
+    {
+        $this->initializeContainer();
+    }
 
     /**
      * Lance l'application et retourne une réponse.
@@ -39,7 +47,13 @@ class Kernel
     {
         return dirname($_SERVER['SCRIPT_FILENAME'], 2);
     }
-
+  
+    /**
+     * Retourne le chemin des différents dossier de l'application
+     *
+     * @param  string $key
+     * @return string
+     */
     public static function directory(string $key): string
     {   
         $bootFile = self::root() . '/start/kernel.php';
@@ -56,4 +70,27 @@ class Kernel
 
         return $directories[$key];
     }
+    
+    /**
+     * Retourne une instance du container d'injections de dépendances
+     *
+     * @return ContainerInterface
+     */
+    public static function container(): ContainerInterface
+    {
+        return self::$container;
+    }
+
+    /**
+     * Initialise le conteneur d'injection de dépendances.
+     */
+    private function initializeContainer(): void
+    {
+        $builder = new ContainerBuilder();
+
+        $builder->addDefinitions(Kernel::root() . '/config/config.php');
+
+        self::$container = $builder->build();
+    }
+
 }

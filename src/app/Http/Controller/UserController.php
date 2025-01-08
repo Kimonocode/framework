@@ -8,7 +8,6 @@ use Psr\Http\Message\ServerRequestInterface;
 
 class UserController extends Controller {
 
-
     public function show(ServerRequestInterface $request, RendererInterface $view)
     {
         return $view->render('user', ['id' => $request->getAttribute('params')['id']]);
