@@ -12,7 +12,7 @@ use Infra\Renderer\TwigRenderer;
 use ReflectionFunction;
 use ReflectionMethod;
 
-class Router
+class Router implements RouterInterface
 {
     /**
      * Tableau des routes
@@ -33,12 +33,7 @@ class Router
     }
 
     /**
-     * Ajoute une Route GET dans le tableau de routes
-     *
-     * @param  string $name
-     * @param  string $path 
-     * @param  callable|array $handler fonction ou contrôleur appelé à l'appel de la route
-     * @return Route
+     * @inheritDoc
      */
     public function get(string $name, string $path, callable|array $handler): Route
     {
@@ -48,11 +43,37 @@ class Router
     }
 
     /**
-     * Parcourt toutes les routes du tableau et appelle la fonction de la route si elle est matchée.
-     *
-     * @param ServerRequestInterface $request
-     * @return ResponseInterface
-     * @throws RouteNotFoundException
+     * @inheritDoc
+     */
+    public function delete(string $name, string $path, array|callable $handler): Route 
+    {
+        $route = new Route('DELETE', $name, $path, $handler);
+        $this->routes['DELETE'][$path] = $route;
+        return $route;
+    }
+    
+    /**
+     * @inheritDoc
+     */
+    public function post(string $name, string $path, array|callable $handler): Route 
+    {
+        $route = new Route('POST', $name, $path, $handler);
+        $this->routes['POST'][$path] = $route;
+        return $route;
+    }
+    
+    /**
+     * @inheritDoc
+     */
+    public function put(string $name, string $path, array|callable $handler): Route 
+    {
+        $route = new Route('PUT', $name, $path, $handler);
+        $this->routes['PUT'][$path] = $route;
+        return $route;
+    }
+
+    /**
+     * @inheritDoc
      */
     public function dispatch(ServerRequestInterface $request): ResponseInterface
     {
@@ -181,7 +202,6 @@ class Router
 
         return call_user_func_array($handler, $dependencies);
     }
-
 }
 
 
