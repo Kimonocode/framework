@@ -1,10 +1,10 @@
 <?php
 
+use Infra\Router\RouterInterface;
 use App\Http\Controller\HomeController;
 use App\Http\Controller\UserController;
-use Infra\Router\Router;
 
-$router = new Router();
+$router = Infra\Kernel::container()->get(RouterInterface::class);
 
 /**
  * Enregistrement des routes dans ce fichier
