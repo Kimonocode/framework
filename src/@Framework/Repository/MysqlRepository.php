@@ -12,10 +12,10 @@ class MysqlRepository implements RepositoryInterface {
     public static function getConnection()
     {
         if (self::$connection === null) {
-            $host = 'localhost';
-            $dbname = 'phpanel';
-            $user = 'root';
-            $psd = '';
+            $host = getenv("DB_HOST");
+            $dbname = getenv("DB_NAME");
+            $user = getenv("DB_USER");
+            $psd = getenv("DB_PASS");
             try {
                 self::$connection = new PDO(
                     "msql:host=$host;dbname=$dbname;charset=utf8;",

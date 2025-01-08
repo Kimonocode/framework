@@ -1,0 +1,29 @@
+{% include "includes/header.html.twig" %}
+
+<h1>Créer un compte</h1>
+
+<form action="" method="post">
+    <div class="field">
+        <label for="lastName">Nom</label>
+        <input type="text" name="lastName" id="lastName">
+    </div>
+    <div class="field">
+        <label for="firstName">Prénom</label>
+        <input type="text" name="firstName" id="firstName">
+    </div>
+    <div class="field">
+        <label for="email">Adresse Email</label>
+        <input type="email" name="email" id="email">
+    </div>
+    <div class="field">
+        <label for="password">Mot de passe</label>
+        <input type="password" name="password" id="password">
+    </div>
+    <div class="field">
+        <label for="password2">Confirmer le mot de passe</label>
+        <input type="password2" name="password2" id="password2">
+    </div>
+    <button type="submit">Créer un compte</button>
+</form>
+
+{% include "includes/footer.html.twig" %}
