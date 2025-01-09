@@ -3,7 +3,11 @@
 namespace Infra\Http\Controller;
 
 use GuzzleHttp\Psr7\Response;
+use Infra\Helpers\Stringify;
+use Infra\Kernel;
+use Infra\Router\RouterInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 class Controller {
 
@@ -85,5 +89,46 @@ class Controller {
             ['Content-Type' => 'application/json'], 
             json_encode($json, JSON_UNESCAPED_UNICODE)
         );
+    }
+
+    /**
+     * Converti les champs html camelCase en snakeCase
+     * 
+     * @param \Psr\Http\Message\ServerRequestInterface $request
+     * @return array
+     */
+    public function getFormData(ServerRequestInterface $request): array
+    {
+        $data = $request->getParsedBody();
+        $formattedData = [];
+
+        foreach ($data as $key => $value) {
+            $formattedData[Stringify::camelToSnakeCase($key)] = $value;
+        }
+        return $formattedData;
+    }
+
+    /**
+     * Redirige vers une vue
+     * 
+     * @param string $name
+     * @param ?int $code
+     * @return \Psr\Http\Message\ResponseInterface
+     */
+    public function redirectToView(string $name, ?int $code = 301): ResponseInterface
+    {
+        $router = Kernel::container()->get(RouterInterface::class);
+
+        // Parcourir les routes définies pour le GET
+        foreach ($router->getRoutes('GET') as $route) {
+            if ($route->getName() === $name) {
+                // Récupérer l'URL associée à la route et rediriger
+                $url = $route->getPath();
+                return new Response($code, ['Location' => $url]);
+            }
+        }
+
+        // Si la route n'est pas trouvée, une exception ou une réponse alternative peut être retournée
+        throw new \RuntimeException("La route nommée '{$name}' n'a pas été trouvée.");
     }
 }

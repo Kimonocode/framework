@@ -17,12 +17,26 @@ abstract class Model
      * Récupère une ligne par son ID
      *
      * @param string|int $id
-     * @return static|null
+     * @return Model|null
      */
     public static function find(string|int $id): ?static
     {
         $repository = static::getRepository();
         $result = $repository->find(static::$table, $id);
+        return $result ? static::mapToObject($result) : null;
+    }
+
+    /**
+     * Récupère une ligne par son champ
+     * 
+     * @param string $field
+     * @param string $value
+     * @return Model|null
+     */
+    public static function findBy(string $field,  string $value): ?static
+    {
+        $repository = static::getRepository();
+        $result = $repository->findBy(static::$table, $field, $value);
         return $result ? static::mapToObject($result) : null;
     }
 
@@ -41,12 +55,23 @@ abstract class Model
     /**
      * Enregistre les données dans la table
      *
-     * @return bool
+     * @return int|null
      */
-    public function save(): bool
+    public function save(): ?int
     {
         $data = get_object_vars($this);
         return static::getRepository()->create(static::$table, $data);
+    }
+
+    /**
+     * Retroune un mot de passe hash
+     * 
+     * @param string $password
+     * @return string hash
+     */
+    public static function hashPassword(string $password): string
+    {
+        return password_hash($password, PASSWORD_DEFAULT);
     }
 
     /**

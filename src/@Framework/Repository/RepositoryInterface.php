@@ -5,13 +5,13 @@ namespace Infra\Repository;
 interface RepositoryInterface {
         
     /**
-     * Ajoute des données
+     * Ajoute des données et retourne le dernier id inséré ou null si la reqête échoue
      *
      * @param string $table Nom de la table
      * @param  array $data Données à ajouter
-     * @return bool True si les données ont été insérées False si non
+     * @return int|null True si les données ont été insérées False si non
      */
-    public function create(string $table, array $data): bool;
+    public function create(string $table, array $data): ?int;
     
     /**
      * Cherche un objet dans le Repository par son id
@@ -21,6 +21,16 @@ interface RepositoryInterface {
      * @return array
      */
     public function find(string $table, string|int $id): array;
+
+    /**
+     * Cherche un objet dans le Repository par son champ
+     * 
+     * @param string $table
+     * @param string $field
+     * @param string $value
+     * @return array
+     */
+    public function findBy(string $table, string $field, string $value): array;
      
     /**
      * Retourne toute les données d'une table
