@@ -3,10 +3,14 @@
 namespace Infra\Router;
 
 use GuzzleHttp\Psr7\Response;
+use Infra\Auth\Auth;
+use Infra\Auth\AuthInterface;
+use Infra\Auth\SessionInterface;
 use Infra\Errors\Router\InvalidControllerException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Infra\Errors\Router\RouteNotFoundException;
+use Infra\Kernel;
 use Infra\Renderer\RendererInterface;
 use Infra\Renderer\TwigRenderer;
 use ReflectionFunction;
@@ -190,11 +194,17 @@ class Router implements RouterInterface
                 case ResponseInterface::class:
                     $dependencies[] = new Response();
                     break;
-                case RendererInterface::class:  // Correctement injecter le Renderer
-                    $dependencies[] = new TwigRenderer(); // ou une autre implémentation de RendererInterface
+                case RendererInterface::class:
+                    $dependencies[] = Kernel::container()->get(RendererInterface::class);
+                    break;
+                case AuthInterface::class:
+                    $dependencies[] = kernel::container()->get(AuthInterface::class); 
+                    break;
+                case SessionInterface::class:
+                    $dependencies[] = kernel::container()->get(SessionInterface::class); 
                     break;
                 default:
-                // Pour tout autre paramètre, on passe null (ou une valeur par défaut si nécessaire)
+                    // Pour tout autre paramètre, on passe null (ou une valeur par défaut si nécessaire)
                     $dependencies[] = null;
                     break;
             }

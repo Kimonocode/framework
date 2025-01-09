@@ -24,8 +24,9 @@ final class Users extends AbstractMigration
             ->addColumn('password', 'string', ['limit' => 40])
             ->addColumn('first_name', 'string', ['limit' => 30])
             ->addColumn('last_name', 'string', ['limit' => 30])
-            ->addColumn('created', 'datetime')
-            ->addColumn('updated', 'datetime', ['null' => true])
+            ->addColumn('role', 'string', ['limit' => 30])
+            ->addColumn('created_at', 'datetime')
+            ->addColumn('updated_at', 'datetime', ['null' => true])
             ->addIndex(['email'], ['unique' => true])
             ->create();
     }

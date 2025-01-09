@@ -2,6 +2,8 @@
 
 namespace Infra\Repository;
 
+use Infra\Env\EnvInterface;
+use Infra\Kernel;
 use PDO;
 use PDOException;
 
@@ -9,13 +11,14 @@ class MysqlRepository implements RepositoryInterface {
     
     private static ?PDO $connection = null;       
     
+
     public static function getConnection()
     {
         if (self::$connection === null) {
-            $host = getenv("DB_HOST");
-            $dbname = getenv("DB_NAME");
-            $user = getenv("DB_USER");
-            $psd = getenv("DB_PASS");
+            $host = Kernel::container()->get('DB_HOST');
+            $dbname = Kernel::container()->get('DB_NAME');
+            $user = Kernel::container()->get('DB_USER');
+            $psd = Kernel::container()->get('DB_PASS');
             try {
                 self::$connection = new PDO(
                     "mysql:host=$host;dbname=$dbname;charset=utf8;",
@@ -34,15 +37,35 @@ class MysqlRepository implements RepositoryInterface {
     /**
      * @inheritDoc
      */
-    public function create(string $table, array $data): bool 
-    {   
+    public function create(string $table, array $data): ?int
+    {
+        // Vérification que des données ont été fournies
+        if (empty($data)) {
+            throw new \InvalidArgumentException('Les données ne peuvent pas être vides.');
+        }
+
+        // Création des colonnes et des placeholders
         $columns = implode(', ', array_keys($data));
         $placeholders = ':' . implode(', :', array_keys($data));
 
-        $sql = "INSERT INTO $table ($columns) VALUES ($placeholders)";
+        // Construction de la requête SQL
+        $sql = "INSERT INTO {$table} ({$columns}) VALUES ({$placeholders})";
 
+        // Préparation et exécution de la requête
         $stmt = self::getConnection()->prepare($sql);
-        return $stmt->execute($data);
+
+        try {
+            if ($stmt->execute($data)) {
+                // Retourne le dernier ID inséré
+                return (int) self::getConnection()->lastInsertId();
+            }
+        } catch (PDOException $e) {
+            // Enregistrement ou gestion de l'erreur
+            error_log('Erreur lors de l\'insertion : ' . $e->getMessage());
+        }
+
+        // Retourne null en cas d'échec
+        return null;
     }
      
     /**
@@ -53,6 +76,17 @@ class MysqlRepository implements RepositoryInterface {
         $sql = "SELECT * from $table WHERE id = ?";
         $stmt = self::getConnection()->prepare($sql);
         $stmt->execute([$id]);
+        return $stmt->fetch();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function findBy(string $table, string $field, string $value): array 
+    {
+        $sql = "SELECT * from $table WHERE $field = ?";
+        $stmt = self::getConnection()->prepare($sql);
+        $stmt->execute([$value]);
         return $stmt->fetch();
     }
 

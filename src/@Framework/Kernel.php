@@ -13,7 +13,7 @@ use Psr\Http\Message\ServerRequestInterface;
 class Kernel
 {       
     private static $container;
-
+    
     public function __construct()
     {
         $this->initializeContainer();
@@ -88,7 +88,8 @@ class Kernel
     {
         $builder = new ContainerBuilder();
 
-        $builder->addDefinitions(Kernel::root() . '/config/di.php');
+        $builder->addDefinitions(__DIR__ . '/config.php');
+        $builder->addDefinitions(Kernel::root() . '/config.php');
 
         self::$container = $builder->build();
     }

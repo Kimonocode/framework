@@ -2,10 +2,12 @@
 
 namespace App\Model;
 
-use Infra\Repository\Model\Model;
+use Infra\Repository\Model;
 
 class User extends Model {
     protected static string $table = "users";
+
+    public int $id;
 
     public string $email;
 
@@ -15,6 +17,8 @@ class User extends Model {
 
     public string $last_name;
 
-    public string $created;
+    public string $role;
+
+    public string $created_at;
 
 }
