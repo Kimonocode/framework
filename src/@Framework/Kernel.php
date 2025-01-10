@@ -25,7 +25,7 @@ class Kernel
     public function run(ServerRequestInterface $request): ResponseInterface
     {
 
-        require_once(self::root() . '/start/routes.php'); 
+        require_once self::root() . '/start/routes.php'; 
 
         // Tente de dispatcher la requête
         $response = $router->dispatch($request);

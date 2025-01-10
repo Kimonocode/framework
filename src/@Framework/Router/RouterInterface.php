@@ -57,6 +57,23 @@ interface RouterInterface {
     public function delete(string $name, string $path, callable|array $handler): Route;
 
     /**
+     * Construit un groupe de routes Pour ajouter un préfix ou un middleware commun
+     * 
+     * @param array $attributes
+     * @param callable $routes
+     * @return void
+     */
+    public function group(array $attributes, callable $routes): void;
+
+    /**
+     * Ajoute un middleware global
+     * 
+     * @param string $middleware
+     * @return void
+     */
+    public function addGlobalMiddleware(string $middleware): void;
+
+    /**
      * Parcourt toutes les routes du tableau et appelle la fonction de la route si elle est matchée.
      *
      * @param ServerRequestInterface $request

@@ -5,14 +5,13 @@ use Infra\Kernel;
 use Infra\Router\RouterInterface;
 use Twig\TwigFunction;
 
-define('VIEWS_PATH', Kernel::root() . '/resources/views');
 
 /**
  * Tableau des différents dossiers de l'application
  * @var array
  */
 $directories = [
-    'views' => VIEWS_PATH,
+    'views' => Kernel::root() . '/resources/views',
     'start' =>  Kernel::root() . '/start',
     'config' => Kernel::root() . '/config',
 ];
@@ -23,7 +22,7 @@ $directories = [
  */
 $htmlFunctions = [
     'template' => function(string $template): string {
-        $path = VIEWS_PATH . "/$template" . '.html.php';
+        $path = Kernel::root() . '/resources/views' . "/$template" . '.html.php';
         ob_start();
         require_once($path);
         return ob_get_clean();

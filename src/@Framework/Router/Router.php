@@ -29,6 +29,10 @@ class Router implements RouterInterface
         'DELETE' => []
     ];
 
+    private ?string $currentGroupPrefix = null;
+    private array $currentGroupMiddlewares = [];
+    private array $globalMiddlewares = [];
+
     /**
      * @inheritDoc
      */
@@ -40,10 +44,42 @@ class Router implements RouterInterface
     /**
      * @inheritDoc
      */
+    public function group(array $attributes, callable $routes): void
+    {
+        // Sauvegarde les paramètres actuels
+        $previousPrefix = $this->currentGroupPrefix;
+        $previousMiddlewares = $this->currentGroupMiddlewares;
+
+        // Applique les nouveaux paramètres
+        $this->currentGroupPrefix = ($previousPrefix ?? '') . ($attributes['prefix'] ?? '');
+        $this->currentGroupMiddlewares = array_merge($previousMiddlewares, $attributes['middlewares'] ?? []);
+
+        // Exécute les routes du groupe
+        $routes($this);
+
+        // Restaure les anciens paramètres
+        $this->currentGroupPrefix = $previousPrefix;
+        $this->currentGroupMiddlewares = $previousMiddlewares;
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function get(string $name, string $path, callable|array $handler): Route
     {
-        $route = new Route('GET', $name, $path, $handler);
-        $this->routes['GET'][$path] = $route;
+        $route = new Route(
+            'GET',
+            $name,
+            ($this->currentGroupPrefix ?? '') . $path,
+            $handler
+        );
+
+        // Ajout des middlewares du groupe
+        foreach ($this->currentGroupMiddlewares as $middleware) {
+            $route->middleware($middleware);
+        }
+
+        $this->routes['GET'][$route->getPath()] = $route;
         return $route;
     }
 
@@ -52,8 +88,19 @@ class Router implements RouterInterface
      */
     public function delete(string $name, string $path, array|callable $handler): Route 
     {
-        $route = new Route('DELETE', $name, $path, $handler);
-        $this->routes['DELETE'][$path] = $route;
+        $route = new Route(
+            'DELETE',
+            $name,
+            ($this->currentGroupPrefix ?? '') . $path,
+            $handler
+        );
+
+        // Ajout des middlewares du groupe
+        foreach ($this->currentGroupMiddlewares as $middleware) {
+            $route->middleware($middleware);
+        }
+
+        $this->routes['DELETE'][$route->getPath()] = $route;
         return $route;
     }
     
@@ -62,8 +109,19 @@ class Router implements RouterInterface
      */
     public function post(string $name, string $path, array|callable $handler): Route 
     {
-        $route = new Route('POST', $name, $path, $handler);
-        $this->routes['POST'][$path] = $route;
+        $route = new Route(
+            'POST',
+            $name,
+            ($this->currentGroupPrefix ?? '') . $path,
+            $handler
+        );
+
+        // Ajout des middlewares du groupe
+        foreach ($this->currentGroupMiddlewares as $middleware) {
+            $route->middleware($middleware);
+        }
+
+        $this->routes['POST'][$route->getPath()] = $route;
         return $route;
     }
     
@@ -72,9 +130,75 @@ class Router implements RouterInterface
      */
     public function put(string $name, string $path, array|callable $handler): Route 
     {
-        $route = new Route('PUT', $name, $path, $handler);
-        $this->routes['PUT'][$path] = $route;
+        $route = new Route(
+            'PUT',
+            $name,
+            ($this->currentGroupPrefix ?? '') . $path,
+            $handler
+        );
+
+        // Ajout des middlewares du groupe
+        foreach ($this->currentGroupMiddlewares as $middleware) {
+            $route->middleware($middleware);
+        }
+
+        $this->routes['PUT'][$route->getPath()] = $route;
         return $route;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function addGlobalMiddleware(string $middleware): void
+    {
+        $this->globalMiddlewares[] = $middleware;
+    }
+
+    /**
+     * Apllique les middlewares
+     * 
+     * @param array $middlewares
+     * @param \Psr\Http\Message\ServerRequestInterface $request
+     * @param callable $finalHandler
+     * @throws \RuntimeException
+     * @return \Psr\Http\Message\ResponseInterface
+     */
+    public function applyMiddlewares(array $middlewares, ServerRequestInterface $request, callable $finalHandler): ResponseInterface
+    {
+        if (empty($middlewares)) {
+            // Aucun middleware restant, appeler le gestionnaire final
+            return $finalHandler($request);
+        }
+
+        $middleware = array_shift($middlewares); // Récupère le premier middleware
+        $middlewareInstance = new $middleware();
+
+        if (!$middlewareInstance instanceof MiddlewareInterface) {
+            throw new \RuntimeException("Le middleware $middleware doit implémenter MiddlewareInterface.");
+        }
+
+        // Crée un RequestHandler anonyme pour enchaîner les middlewares
+        $handler = new class($middlewares, $finalHandler, $this) implements \Psr\Http\Server\RequestHandlerInterface {
+            private array $middlewares;
+            private $finalHandler;
+            private $router;
+
+            public function __construct(array $middlewares, callable $finalHandler, Router $router)
+            {
+                $this->middlewares = $middlewares;
+                $this->finalHandler = $finalHandler;
+                $this->router = $router;
+            }
+
+            public function handle(ServerRequestInterface $request): ResponseInterface
+            {
+                // Applique les middlewares restants
+                return $this->router->applyMiddlewares($this->middlewares, $request, $this->finalHandler);
+            }
+        };
+
+        // Appelle le middleware avec la requête et le handler anonyme
+        return $middlewareInstance->process($request, $handler);
     }
 
     /**
@@ -84,25 +208,31 @@ class Router implements RouterInterface
     {
         $uri = $request->getUri()->getPath();
         $method = $request->getMethod();
-    
+
         if (empty($this->getRoutes($method))) {
             throw new RouteNotFoundException("Aucune route définie pour la méthode $method.");
         }
-    
+
+        // Ajout des middlewares globaux
+        $middlewares = $this->globalMiddlewares;
+
         foreach ($this->getRoutes($method) as $route) {
             $params = $this->matchRoute($route->getPath(), $uri);
             if ($params !== false) {
                 // Ajout des paramètres à la requête
                 $request = $request->withAttribute('params', $params);
-                 // Récupère les middlewares et le gestionnaire final
-                $middlewares = $route->getMiddlewares();
+
+                // Récupère les middlewares spécifiques à la route
+                $middlewares = array_merge($middlewares, $route->getMiddlewares());
+
+                // Gestion du handler
                 $handler = fn(ServerRequestInterface $req) => $this->getHandler($route, $req);
 
-                // Exécute la chaîne de middlewares
+                // Exécute la chaîne de middlewares (globaux + spécifiques à la route)
                 return $this->applyMiddlewares($middlewares, $request, $handler);
             }
         }
-    
+
         return new Response(404, ['Content-Type' => 'text/plain'], '404 Not Found');
     }
 
@@ -218,46 +348,6 @@ class Router implements RouterInterface
 
         return call_user_func_array($handler, $dependencies);
     }
-
-    public function applyMiddlewares(array $middlewares, ServerRequestInterface $request, callable $finalHandler): ResponseInterface
-    {
-        if (empty($middlewares)) {
-            // Aucun middleware restant, appeler le gestionnaire final
-            return $finalHandler($request);
-        }
-
-        $middleware = array_shift($middlewares); // Récupère le premier middleware
-        $middlewareInstance = new $middleware();
-
-        if (!$middlewareInstance instanceof MiddlewareInterface) {
-            throw new \RuntimeException("Le middleware $middleware doit implémenter MiddlewareInterface.");
-        }
-
-        // Crée un RequestHandler anonyme pour enchaîner les middlewares
-        $handler = new class($middlewares, $finalHandler, $this) implements \Psr\Http\Server\RequestHandlerInterface {
-            private array $middlewares;
-            private $finalHandler;
-            private $router;
-
-            public function __construct(array $middlewares, callable $finalHandler, Router $router)
-            {
-                $this->middlewares = $middlewares;
-                $this->finalHandler = $finalHandler;
-                $this->router = $router;
-            }
-
-            public function handle(ServerRequestInterface $request): ResponseInterface
-            {
-                // Applique les middlewares restants
-                return $this->router->applyMiddlewares($this->middlewares, $request, $this->finalHandler);
-            }
-        };
-
-        // Appelle le middleware avec la requête et le handler anonyme
-        return $middlewareInstance->process($request, $handler);
-    }
-
-
 }
 
 

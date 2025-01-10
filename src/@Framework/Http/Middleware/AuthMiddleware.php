@@ -17,7 +17,7 @@ class AuthMiddleware implements MiddlewareInterface {
         $isAuthenticated = \Infra\Kernel::container()->get(AuthInterface::class)->isAuthenticated();
         if(!$isAuthenticated){
             return (new Response())
-                ->withStatus(301)
+                ->withStatus(401)
                 ->withHeader('Location', $this->redirect);
         }
         return $handler->handle($request);
