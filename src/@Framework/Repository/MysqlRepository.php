@@ -82,7 +82,7 @@ class MysqlRepository implements RepositoryInterface {
     /**
      * @inheritDoc
      */
-    public function findBy(string $table, string $field, string $value): array 
+    public function findBy(string $table, string $field, string $value): bool|array 
     {
         $sql = "SELECT * from $table WHERE $field = ?";
         $stmt = self::getConnection()->prepare($sql);

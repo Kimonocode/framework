@@ -49,6 +49,6 @@ class Session implements SessionInterface
      */
     public function flash(string $key, array $value): void 
     {
-        $_SESSION['flash_message'][$key] = $value;
+        $_SESSION['flashMessage'][$key] = $value;
     }
 }
