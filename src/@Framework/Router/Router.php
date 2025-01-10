@@ -3,7 +3,6 @@
 namespace Infra\Router;
 
 use GuzzleHttp\Psr7\Response;
-use Infra\Auth\Auth;
 use Infra\Auth\AuthInterface;
 use Infra\Auth\SessionInterface;
 use Infra\Errors\Router\InvalidControllerException;
@@ -12,16 +11,18 @@ use Psr\Http\Message\ServerRequestInterface;
 use Infra\Errors\Router\RouteNotFoundException;
 use Infra\Kernel;
 use Infra\Renderer\RendererInterface;
-use Infra\Renderer\TwigRenderer;
+use Psr\Http\Server\MiddlewareInterface;
 use ReflectionFunction;
 use ReflectionMethod;
 
 class Router implements RouterInterface
 {
     /**
-     * Tableau des routes
+     * Tableau de routes
+     * 
+     * @var array
      */
-    private $routes = [
+    private array $routes = [
         'GET' => [],
         'POST' => [],
         'PUT' => [],
@@ -83,20 +84,25 @@ class Router implements RouterInterface
     {
         $uri = $request->getUri()->getPath();
         $method = $request->getMethod();
-
+    
         if (empty($this->getRoutes($method))) {
             throw new RouteNotFoundException("Aucune route définie pour la méthode $method.");
         }
-
+    
         foreach ($this->getRoutes($method) as $route) {
             $params = $this->matchRoute($route->getPath(), $uri);
             if ($params !== false) {
                 // Ajout des paramètres à la requête
                 $request = $request->withAttribute('params', $params);
-                return $this->getHandler($route, $request);
+                 // Récupère les middlewares et le gestionnaire final
+                $middlewares = $route->getMiddlewares();
+                $handler = fn(ServerRequestInterface $req) => $this->getHandler($route, $req);
+
+                // Exécute la chaîne de middlewares
+                return $this->applyMiddlewares($middlewares, $request, $handler);
             }
         }
-
+    
         return new Response(404, ['Content-Type' => 'text/plain'], '404 Not Found');
     }
 
@@ -212,6 +218,46 @@ class Router implements RouterInterface
 
         return call_user_func_array($handler, $dependencies);
     }
+
+    public function applyMiddlewares(array $middlewares, ServerRequestInterface $request, callable $finalHandler): ResponseInterface
+    {
+        if (empty($middlewares)) {
+            // Aucun middleware restant, appeler le gestionnaire final
+            return $finalHandler($request);
+        }
+
+        $middleware = array_shift($middlewares); // Récupère le premier middleware
+        $middlewareInstance = new $middleware();
+
+        if (!$middlewareInstance instanceof MiddlewareInterface) {
+            throw new \RuntimeException("Le middleware $middleware doit implémenter MiddlewareInterface.");
+        }
+
+        // Crée un RequestHandler anonyme pour enchaîner les middlewares
+        $handler = new class($middlewares, $finalHandler, $this) implements \Psr\Http\Server\RequestHandlerInterface {
+            private array $middlewares;
+            private $finalHandler;
+            private $router;
+
+            public function __construct(array $middlewares, callable $finalHandler, Router $router)
+            {
+                $this->middlewares = $middlewares;
+                $this->finalHandler = $finalHandler;
+                $this->router = $router;
+            }
+
+            public function handle(ServerRequestInterface $request): ResponseInterface
+            {
+                // Applique les middlewares restants
+                return $this->router->applyMiddlewares($this->middlewares, $request, $this->finalHandler);
+            }
+        };
+
+        // Appelle le middleware avec la requête et le handler anonyme
+        return $middlewareInstance->process($request, $handler);
+    }
+
+
 }
 
 

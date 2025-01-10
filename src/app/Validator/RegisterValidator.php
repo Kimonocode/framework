@@ -1,9 +1,12 @@
 <?php
 
 namespace App\Validator;
+
 use Infra\Validator\Validator;
 
 class RegisterValidator extends Validator {
+
+    protected string $table = "users";
     
     /**
      * @inheritDoc
@@ -25,12 +28,14 @@ class RegisterValidator extends Validator {
             'email' => [
                 'type' => 'string',
                 'required' => true,
+                'unique' => true,
                 'regex' => '/^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$/'
             ],
             'password' => [
                 'type' => 'string',
                 'required' => true,
-                'min' => 8
+                'min' => 8,
+                'confirm' => 'password2',
             ],
         ];
     }

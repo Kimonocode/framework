@@ -1,5 +1,6 @@
 <?php
 
+use Infra\Auth\SessionInterface;
 use Infra\Kernel;
 use Infra\Router\RouterInterface;
 use Twig\TwigFunction;
@@ -7,7 +8,7 @@ use Twig\TwigFunction;
 define('VIEWS_PATH', Kernel::root() . '/resources/views');
 
 /**
- * Tableau des différens dossiers de l'application
+ * Tableau des différents dossiers de l'application
  * @var array
  */
 $directories = [
@@ -52,5 +53,9 @@ $twigFunctions = [
         }
     
         throw new InvalidArgumentException("La route '$name' n'est pas enregistrée dans le container de routes.");
+    }),
+    new TwigFunction('flashMessage', function(string $key) {
+        $session = Kernel::container()->get(SessionInterface::class);
+        return $session->get('flashMessage')[$key];
     })
 ];

@@ -28,9 +28,9 @@ interface RepositoryInterface {
      * @param string $table
      * @param string $field
      * @param string $value
-     * @return array
+     * @return bool|array
      */
-    public function findBy(string $table, string $field, string $value): array;
+    public function findBy(string $table, string $field, string $value): bool|array;
      
     /**
      * Retourne toute les données d'une table

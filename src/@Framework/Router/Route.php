@@ -2,6 +2,8 @@
 
 namespace Infra\Router;
 
+use Psr\Http\Server\MiddlewareInterface;
+
 class Route {
     
     /**
@@ -31,6 +33,12 @@ class Route {
      * @var callable|array
      */
     private $handler;
+
+    /**
+     * Tableau de middlewares
+     * @var MiddlewareInterface[]
+     */
+    private array $middlewares = [];
 
     public function __construct(string $method, string $name, string $path, callable|array $handler)
     {
@@ -78,6 +86,31 @@ class Route {
     public function getHandler(): callable|array
     {
         return $this->handler;
+    }
+
+    /**
+     * Ajoute un middleware dans la liste
+     * 
+     * @param string $middleware
+     * @return Route
+     */
+    public function middleware(string $middleware)
+    {
+        if (!is_subclass_of($middleware, MiddlewareInterface::class)) {
+            throw new \InvalidArgumentException("Le middleware doit implémenter MiddlewareInterface.");
+        }
+        $this->middlewares[] = $middleware;
+        return $this;
+    }
+
+    /**
+     * Renvoie la liste des middlewares associés à cette route
+     *
+     * @return MiddlewareInterface[]
+     */
+    public function getMiddlewares(): array
+    {
+        return $this->middlewares;
     }
 
 }

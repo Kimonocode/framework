@@ -4,7 +4,6 @@ namespace App\Http\Controller;
 
 use App\Model\User;
 use App\Validator\RegisterValidator;
-use Infra\Auth\AuthInterface;
 use Infra\Auth\SessionInterface;
 use Infra\Http\Controller\Controller;
 use Infra\Renderer\RendererInterface;
@@ -22,7 +21,7 @@ class RegisterController extends Controller {
         $data = $this->getFormData($request);
         $validator = new RegisterValidator();
 
-        if(!$validator->validate(data: $data)) {
+        if(!$validator->validate( $data, $request)) {
             return $this->badRequest($validator->getErrors())->toJson();
         }   
 
@@ -43,6 +42,6 @@ class RegisterController extends Controller {
         $session->set('user', $id);
         $session->flash('sussess', ["message" => "Enregistré avec succès."]);
 
-        return $this->redirectToView('user.panel');
+        return $this->redirectToView('dashboard');
     }
 }
