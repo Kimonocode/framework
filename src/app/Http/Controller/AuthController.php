@@ -14,9 +14,22 @@ class AuthController extends Controller {
         return $view->render('auth/login');
     }
 
-    public function login(ServerRequestInterface $request)
+    public function login(ServerRequestInterface $request, AuthInterface $auth)
     {
-        
+        $email = $request->getParsedBody()['email'];
+        $password = $request->getParsedBody()['password'];
+
+        if(!$auth->login($email, $password)){
+            return $this->badRequest('Invalid Credentials')->toJson();
+        }
+
+        $user = $auth->getCurrentUser();
+
+        if(!$user){
+            return $this->badRequest('Utilisateur introuvable')->toJson(); 
+        }
+
+        return $this->redirectToView('dashboard');
     }
 
     public function logout(AuthInterface $auth)
@@ -24,7 +37,7 @@ class AuthController extends Controller {
         if($auth->logout()){
             return $this->redirectToView('login');
         }
-        return $this->badRequest('Impossible de si déconnecter')->toJson();
+        return $this->badRequest('Impossible de se déconnecter')->toJson();
     }
 
 }

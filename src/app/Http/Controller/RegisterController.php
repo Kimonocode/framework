@@ -4,6 +4,7 @@ namespace App\Http\Controller;
 
 use App\Model\User;
 use App\Validator\RegisterValidator;
+use Infra\Auth\AuthInterface;
 use Infra\Auth\SessionInterface;
 use Infra\Http\Controller\Controller;
 use Infra\Renderer\RendererInterface;
@@ -16,7 +17,11 @@ class RegisterController extends Controller {
         return $view->render('register');
     }
    
-    public function register(ServerRequestInterface $request, SessionInterface $session) 
+    public function register(
+        ServerRequestInterface $request,
+        SessionInterface $session,
+        AuthInterface $auth
+    ) 
     {
         $data = $this->getFormData($request);
         $validator = new RegisterValidator();
@@ -36,10 +41,10 @@ class RegisterController extends Controller {
         $id = $user->save();
 
         if(!$id){
-            $this->badRequest('Erreur interne enregistrement impossible')->toJson();
+            $this->badRequest('Erreur interne; enregistrement impossible')->toJson();
         }
 
-        $session->set('user', $id);
+        $auth->authenticate($id);
         $session->flash('sussess', ["message" => "Enregistré avec succès."]);
 
         return $this->redirectToView('dashboard');

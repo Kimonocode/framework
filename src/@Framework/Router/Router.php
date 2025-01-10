@@ -29,9 +29,29 @@ class Router implements RouterInterface
         'DELETE' => []
     ];
 
+    /**
+     * Préfix des routes
+     * @var string|null
+     */
     private ?string $currentGroupPrefix = null;
+
+    /**
+     * Group en cours
+     * @var array
+     */
     private array $currentGroupMiddlewares = [];
+
+    /**
+     * Middlewares globaux
+     * @var MiddlewareInterface[]
+     */
     private array $globalMiddlewares = [];
+
+    /**
+     * Summary of currentRoute
+     * @var Route|null
+     */
+    private ?Route $currentRoute = null;
 
     /**
      * @inheritDoc
@@ -155,19 +175,26 @@ class Router implements RouterInterface
     }
 
     /**
-     * Apllique les middlewares
-     * 
+     * Applique les middlewares.
+     *
      * @param array $middlewares
-     * @param \Psr\Http\Message\ServerRequestInterface $request
+     * @param ServerRequestInterface $request
      * @param callable $finalHandler
      * @throws \RuntimeException
-     * @return \Psr\Http\Message\ResponseInterface
+     * @return ResponseInterface
      */
     public function applyMiddlewares(array $middlewares, ServerRequestInterface $request, callable $finalHandler): ResponseInterface
     {
         if (empty($middlewares)) {
             // Aucun middleware restant, appeler le gestionnaire final
-            return $finalHandler($request);
+            $response = $finalHandler($request);
+
+            // Si le handler retourne un contrôleur ou autre type non conforme, transformer en réponse valide
+            if (!$response instanceof ResponseInterface) {
+                throw new \RuntimeException("Le final handler doit retourner une instance de Psr\Http\Message\ResponseInterface.");
+            }
+
+            return $response;
         }
 
         $middleware = array_shift($middlewares); // Récupère le premier middleware
@@ -217,6 +244,7 @@ class Router implements RouterInterface
         $middlewares = $this->globalMiddlewares;
 
         foreach ($this->getRoutes($method) as $route) {
+            $this->currentRoute = $route;
             $params = $this->matchRoute($route->getPath(), $uri);
             if ($params !== false) {
                 // Ajout des paramètres à la requête
@@ -225,14 +253,24 @@ class Router implements RouterInterface
                 // Récupère les middlewares spécifiques à la route
                 $middlewares = array_merge($middlewares, $route->getMiddlewares());
 
-                // Gestion du handler
-                $handler = fn(ServerRequestInterface $req) => $this->getHandler($route, $req);
+                // Définition du handler final
+                $handler = function (ServerRequestInterface $req): ResponseInterface {
+                    $response = $this->getHandler($this->currentRoute, $req);
+
+                    // Validation explicite pour transformer un retour invalide
+                    if (!$response instanceof ResponseInterface) {
+                        throw new \RuntimeException("Le handler final doit retourner une instance de Psr\Http\Message\ResponseInterface.");
+                    }
+
+                    return $response;
+                };
 
                 // Exécute la chaîne de middlewares (globaux + spécifiques à la route)
                 return $this->applyMiddlewares($middlewares, $request, $handler);
             }
         }
 
+        // Si aucune route correspondante n'est trouvée, retourne une erreur 404
         return new Response(404, ['Content-Type' => 'text/plain'], '404 Not Found');
     }
 
@@ -275,11 +313,10 @@ class Router implements RouterInterface
      * @return mixed
      * @throws InvalidControllerException
      */
-    private function getHandler(Route $route, ServerRequestInterface $request): mixed
+    private function getHandler(Route $route, ServerRequestInterface $request): ResponseInterface
     {
         $handler = $route->getHandler();
 
-        // Gestion du handler sous forme de tableau [Controller::class, 'method']
         if (is_array($handler)) {
             [$controller, $method] = $handler;
 
@@ -292,13 +329,23 @@ class Router implements RouterInterface
             }
 
             $instance = new $controller();
+            $response = $this->callHandler([$instance, $method], $request);
 
-            return $this->callHandler([$instance, $method], $request);
+            if (!$response instanceof ResponseInterface) {
+                throw new \RuntimeException("Le contrôleur {$controller}::{$method} doit retourner une instance de Psr\Http\Message\ResponseInterface.");
+            }
+
+            return $response;
         }
 
-        // Gestion du handler sous forme de fonction anonyme ou callable
         if (is_callable($handler)) {
-            return $this->callHandler($handler, $request);
+            $response = $this->callHandler($handler, $request);
+
+            if (!$response instanceof ResponseInterface) {
+                throw new \RuntimeException("Le handler doit retourner une instance de Psr\Http\Message\ResponseInterface.");
+            }
+
+            return $response;
         }
 
         throw new InvalidControllerException("Le handler fourni n'est ni un callable valide ni un contrôleur valide.");

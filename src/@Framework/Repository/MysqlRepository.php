@@ -2,7 +2,6 @@
 
 namespace Infra\Repository;
 
-use Infra\Env\EnvInterface;
 use Infra\Kernel;
 use PDO;
 use PDOException;
@@ -19,16 +18,13 @@ class MysqlRepository implements RepositoryInterface {
             $dbname = Kernel::container()->get('DB_NAME');
             $user = Kernel::container()->get('DB_USER');
             $psd = Kernel::container()->get('DB_PASS');
-            try {
-                self::$connection = new PDO(
-                    "msql:host=$host;dbname=$dbname;charset=utf8;",
-                    $user,
-                    $psd,
-                    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-                );
-            } catch (PDOException $e) {
-                die("Erreur de connexion: " . $e->getMessage());
-            }
+
+            self::$connection = new PDO(
+                "mysql:host=$host;dbname=$dbname;charset=utf8;",
+                $user,
+                $psd,
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            );
         }
 
         return self::$connection;

@@ -6,13 +6,21 @@ namespace Infra\Auth;
 interface AuthInterface {
 
     /**
-     * Authentifie l'utilisateur
+     * Vérifie le credentials
      * 
      * @param string $email
      * @param string $password
      * @return bool
      */
     public function login(string $email, string $password): bool;
+
+    /**
+     * Authentifie l'utilisateur
+     * 
+     * @param int $id
+     * @return void
+     */
+    public function authenticate(int $id): void;
 
     /**
      * Déconnecte l'utilisteur

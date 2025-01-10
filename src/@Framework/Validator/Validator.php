@@ -14,11 +14,11 @@ abstract class Validator {
     protected string $table = "";
 
     /**
-     * Valide les données d'une requête
+     * Valide les données d'une requête.
      * 
      * @param array $data
-     * @param ServerRequestInterface|null
-     * @return bool True si les données ont été validées False si non
+     * @param ServerRequestInterface|null $request
+     * @return bool True si les données ont été validées, False sinon.
      */
     public function validate(array $data, ?ServerRequestInterface $request = null): bool
     {
@@ -37,58 +37,75 @@ abstract class Validator {
 
             // Validation du type
             if (isset($rules['type']) && gettype($value) !== $rules['type']) {
-                $this->addError($field, "Le type attendu est {$rules['type']}.");
+                $this->addError($field, "Le type attendu pour est {$rules['type']}.");
             }
 
             // Validation de la longueur minimale
             if (isset($rules['min']) && strlen($value) < $rules['min']) {
-                $this->addError($field, "La longueur minimale est {$rules['min']} caractères.");
+                $this->addError($field, "La longueur minimale pour est de {$rules['min']} caractères.");
             }
 
             // Validation de la longueur maximale
             if (isset($rules['max']) && strlen($value) > $rules['max']) {
-                $this->addError($field, "La longueur maximale est {$rules['max']} caractères.");
+                $this->addError($field, "La longueur maximale pour est de {$rules['max']} caractères.");
             }
 
             // Validation avec une regex
             if (isset($rules['regex']) && !preg_match($rules['regex'], $value)) {
-                $this->addError($field, "Le format est invalide.");
+                $this->addError($field, "Le format de est invalide.");
             }
 
-            // validation de champ unique
-            if(isset($rules['unique']) && $rules['unique'] === true ){
-                $repository = Kernel::container()->get(RepositoryInterface::class);
-                $result = $repository->findBy($this->table, $field, $value);
-                if(is_array($result)){
-                    $this->addError($field,"$value est déjà utilisé.");
-                }
+            // Validation de champ unique
+            if (isset($rules['unique']) && $rules['unique'] === true) {
+                $this->validateUnique($field, $value);
             }
 
-            // Confirmation stricte de deux champs
-            if(isset($rules['confirm'])){
-
-                if($request === null){
-                    throw new \InvalidArgumentException("Une ServerRequestInterface est attendue en second paramètre de la méthode validate pour la règle confirm.");
+            // Validation de confirmation de champ
+            if (isset($rules['confirm'])) {
+                if ($request === null) {
+                    throw new \InvalidArgumentException("Une instance de ServerRequestInterface est requise pour la règle 'confirm'.");
                 }
-
-                $field = Stringify::camelToSnakeCase($field);
-                $value = Stringify::camelToSnakeCase($value);
-                $expected = $request->getParsedBody()[$value];
-                $actual = $request->getParsedBody()[$field];
-
-                if($expected !== $actual){
-                    $this->addError($field,"Les champs ne correspondent pas.");
-                }
-            } 
-
+                $this->validateConfirmation($field, $rules['confirm'], $request);
+            }
         }
 
         return empty($this->errors);
     }
 
-    public function unique()
+    /**
+     * Valide que la valeur du champ est unique dans la base de données.
+     *
+     * @param string $field
+     * @param string $value
+     */
+    private function validateUnique(string $field, string $value): void
     {
+        $repository = Kernel::container()->get(RepositoryInterface::class);
+        $result = $repository->findBy($this->table, $field, $value);
+        if (is_array($result)) {
+            $this->addError($field, "La valeur '{$value}' pour '{$field}' est déjà utilisée.");
+        }
+    }
 
+    /**
+     * Valide la confirmation de deux champs.
+     *
+     * @param string $field
+     * @param string $value
+     * @param ServerRequestInterface $request
+     */
+    private function validateConfirmation(string $field, string $value, ServerRequestInterface $request): void
+    {
+        $fieldSnake = Stringify::camelToSnakeCase($field);
+        $confirmationField = Stringify::camelToSnakeCase($value);
+        
+        $parsedBody = $request->getParsedBody();
+        $expected = $parsedBody[$confirmationField] ?? null;
+        $actual = $parsedBody[$fieldSnake] ?? null;
+
+        if ($expected !== $actual) {
+            $this->addError($field, "Les champs '{$field}' et '{$confirmationField}' ne correspondent pas.");
+        }
     }
 
     /**
